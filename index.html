@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HWOOX. - HWPX Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --container-bg: #1e293b;
+            --border-color: #38bdf8;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --danger-color: #f43f5e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'DungGeunMo', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--container-bg);
+            padding: 30px;
+            border: 3px solid var(--border-color);
+            box-shadow: 6px 6px 0px rgba(56, 189, 248, 0.4);
+            display: none;
+        }
+
+        .container.active {
+            display: block;
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 2px dashed var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .logo span {
+            color: #f43f5e;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: var(--text-color);
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 15px;
+            color: #94a3b8;
+        }
+
+        input[type="text"], input[type="password"], input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background-color: #0f172a;
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            font-size: 15px;
+            outline: none;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-group input {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: #0f172a;
+            border: 2px solid #000;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            box-shadow: 3px 3px 0px #000;
+            transition: transform 0.1s, background-color 0.1s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #000;
+        }
+
+        #result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f172a;
+            border: 2px solid #38bdf8;
+            word-break: break-all;
+            font-size: 13px;
+            display: none;
+        }
+
+        #generated-link {
+            color: #38bdf8;
+            display: inline-block;
+            margin: 8px 0;
+        }
+
+        #loading-screen {
+            text-align: center;
+            padding: 40px 0;
+            display: none;
+        }
+
+        .loading-title {
+            font-size: 18px;
+            margin-bottom: 25px;
+        }
+
+        .pixel-spinner {
+            font-size: 24px;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            animation: blink 0.8s infinite alternate;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.2; }
+            100% { opacity: 1; }
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background-color: #0f172a;
+            border: 2px solid var(--border-color);
+            height: 20px;
+            padding: 2px;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: var(--accent-color);
+            transition: width 0.2s linear;
+        }
+
+        #password-screen {
+            text-align: center;
+            padding: 30px 0;
+            display: none;
+        }
+
+        #viewer-screen {
+            display: none;
+            max-width: 900px;
+        }
+
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar button {
+            width: auto;
+            margin: 0;
+            padding: 6px 10px;
+            font-size: 13px;
+            background-color: #334155;
+            color: var(--text-color);
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        .toolbar button:hover {
+            background-color: #475569;
+        }
+
+        .viewer-container {
+            position: relative;
+            background: #0f172a;
+            border: 2px inset var(--border-color);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            min-height: 500px;
+        }
+
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 20mm;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            transform-origin: top center;
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+
+        .page-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .page-nav button {
+            width: auto;
+            margin: 0;
+            padding: 8px 16px;
+        }
+
+        .page-info {
+            font-weight: bold;
+            font-size: 15px;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- [STEP 1] 업로드 창 -->
+    <div id="upload-container" class="container active">
+        <div class="logo-area">
+            <div class="logo">HWOOX<span>.</span></div>
+            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">RETRO HWPX VIEWER SYSTEM (GITHUB PAGES)</p>
+        </div>
+        <h2>[ 문서 업로드 및 공유 링크 생성 ]</h2>
+        <div class="form-group">
+            <label for="doc-title">> 문서 제목 입력</label>
+            <input type="text" id="doc-title" placeholder="제목을 입력하세요">
+        </div>
+        <div class="form-group">
+            <label for="hwpx-file">> HWPX 파일 선택</label>
+            <input type="file" id="hwpx-file" accept=".hwpx">
+        </div>
+        <div class="form-group checkbox-group">
+            <input type="checkbox" id="use-password" onclick="togglePasswordInput()">
+            <label for="use-password" style="margin-bottom:0; cursor:pointer; color: var(--text-color);">> 비밀번호 암호화 기능 사용</label>
+        </div>
+        <div class="form-group" id="password-group" style="display: none; margin-top: 10px;">
+            <label for="doc-password">> 암호 설정</label>
+            <input type="password" id="doc-password" placeholder="비밀번호 입력">
+        </div>
+        <button onclick="generateLink()">[ 공유 링크 생성하기 ]</button>
+        
+        <div id="result-box">
+            <strong>> 생성된 공유 링크:</strong><br>
+            <a id="generated-link" href="#" target="_blank"></a>
+            <button onclick="copyLink()" style="background-color: #10b981; color: white;">[ 링크 클립보드 복사 ]</button>
+        </div>
+    </div>
+
+    <!-- [STEP 2] 로딩 화면 -->
+    <div id="loading-screen" class="container">
+        <div class="logo-area">
+            <div class="logo">HWOOX<span>.</span></div>
+        </div>
+        <div class="loading-title" id="loading-doc-title">DOCUMENT LOADING...</div>
+        <div class="pixel-spinner">■ ■ ■ LOADING ■ ■ ■</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <p style="margin-top: 15px; font-size: 13px; color: #94a3b8;" id="loading-status">문서 패킷을 복원하는 중입니다...</p>
+    </div>
+
+    <!-- [STEP 3] 비밀번호 입력 화면 -->
+    <div id="password-screen" class="container">
+        <div class="logo-area">
+            <div class="logo">HWOOX<span>.</span></div>
+        </div>
+        <h2>[🔒 보안 문서 잠금 해제 ]</h2>
+        <p style="margin-bottom: 15px; font-size: 13px; color: #94a3b8;">이 문서는 암호화되어 있습니다. 비밀번호를 입력하세요.</p>
+        <div class="form-group">
+            <input type="password" id="input-password" placeholder="PASSWORD">
+        </div>
+        <button onclick="verifyPassword()">[ 문서 열기 ]</button>
+        <p id="password-error" style="color: var(--danger-color); font-size: 13px; margin-top: 10px; display: none;">> 오류: 비밀번호가 일치하지 않습니다!</p>
+    </div>
+
+    <!-- [STEP 4] 뷰어 창 -->
+    <div id="viewer-screen" class="container">
+        <div class="viewer-header">
+            <h3 id="viewer-title" style="font-size: 16px; color: var(--accent-color);">TITLE</h3>
+            <div class="toolbar">
+                <button onclick="zoomIn()">확대(+)</button>
+                <button onclick="zoomOut()">축소(-)</button>
+                <button onclick="printDoc()">인쇄</button>
+                <button onclick="downloadDoc()">다운로드</button>
+                <button onclick="shareLink()" style="background-color: #10b981; color: white;">공유</button>
+            </div>
+        </div>
+
+        <div class="viewer-container">
+            <div class="a4-page" id="a4-content">
+                <p style="color: #64748b; text-align: center; margin-top: 40mm;">문서 렌더링 영역입니다.</p>
+            </div>
+        </div>
+
+        <div class="page-nav">
+            <button onclick="prevPage()">◀ 이전</button>
+            <div class="page-info"><span id="current-page">1</span> / <span id="total-pages">1</span></div>
+            <button onclick="nextPage()">다음 ▶</button>
+        </div>
+    </div>
+
+    <script>
+        let currentDocData = { title: '', pwdBase64: '', page: 1, content: '' };
+        let currentScale = 1.0;
+        let currentPageNum = 1;
+        let mockPages = ["문서 첫 번째 페이지 내용입니다.", "문서 두 번째 페이지 내용입니다.", "문서 세 번째 페이지 내용입니다."];
+
+        window.onload = function() {
+            // URL 해시 구조 파싱: #/문서제목/비밀번호base64/페이지번호
+            const hash = window.location.hash;
+            
+            if (hash.startsWith('#/')) {
+                const parts = hash.substring(2).split('/');
+                if (parts.length >= 3) {
+                    const title = decodeURIComponent(parts[0]);
+                    const encodedPwd = parts[1];
+                    const pageNum = parseInt(parts[2]) || 1;
+
+                    currentDocData.title = title;
+                    currentDocData.pwdBase64 = encodedPwd;
+                    currentDocData.page = pageNum;
+                    
+                    // 로컬스토리지에 업로드자가 저장해 둔 파일 내용 복원
+                    currentDocData.content = localStorage.getItem('hwpx_file_' + title) || "";
+
+                    showScreen('loading-screen');
+                    startLoadingAnimation();
+                    return;
+                }
+            }
+
+            showScreen('upload-container');
+        };
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function togglePasswordInput() {
+            const usePwd = document.getElementById('use-password').checked;
+            document.getElementById('password-group').style.display = usePwd ? 'block' : 'none';
+        }
+
+        function generateLink() {
+            const title = document.getElementById('doc-title').value.trim();
+            const fileInput = document.getElementById('hwpx-file');
+            const usePwd = document.getElementById('use-password').checked;
+            const password = document.getElementById('doc-password').value;
+
+            if (!title) {
+                alert('문서 제목을 입력해주세요.');
+                return;
+            }
+            if (fileInput.files.length === 0) {
+                alert('HWPX 파일을 선택해주세요.');
+                return;
+            }
+            if (usePwd && !password) {
+                alert('설정할 비밀번호를 입력해주세요.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const fileBase64 = e.target.result;
+                
+                // 브라우저 로컬 스토리지에 파일 데이터 저장 (제목 기준)
+                localStorage.setItem('hwpx_file_' + title, fileBase64);
+
+                // 비밀번호를 Base64로 인코딩 (없으면 'none')
+                const pwdBase64 = usePwd ? btoa(unescape(encodeURIComponent(password))) : 'none';
+                const pageNum = 1;
+
+                // 요청하신 형태의 링크 생성: https://사이트주소/#/문서제목/비밀번호base64/페이지번호
+                const baseUrl = window.location.origin + window.location.pathname;
+                const shortLink = `${baseUrl}#/${encodeURIComponent(title)}/${pwdBase64}/${pageNum}`;
+
+                document.getElementById('generated-link').href = shortLink;
+                document.getElementById('generated-link').innerText = shortLink;
+                document.getElementById('result-box').style.display = 'block';
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function copyLink() {
+            const linkText = document.getElementById('generated-link').innerText;
+            navigator.clipboard.writeText(linkText).then(() => {
+                alert('공유 링크가 클립보드에 복사되었습니다!');
+            });
+        }
+
+        function startLoadingAnimation() {
+            let progressBar = document.getElementById('progress-bar');
+            let width = 0;
+
+            document.getElementById('loading-doc-title').innerText = `[ ${currentDocData.title} ] 로딩 중...`;
+
+            let interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    
+                    // 비밀번호가 설정되어 있는 경우 잠금 화면 표시
+                    if (currentDocData.pwdBase64 && currentDocData.pwdBase64 !== 'none') {
+                        showScreen('password-screen');
+                    } else {
+                        initViewer();
+                    }
+                } else {
+                    width += 20;
+                    progressBar.style.width = width + '%';
+                }
+            }, 80);
+        }
+
+        function verifyPassword() {
+            const inputPwd = document.getElementById('input-password').value;
+            try {
+                const originalPwd = decodeURIComponent(escape(atob(currentDocData.pwdBase64)));
+                
+                if (inputPwd === originalPwd) {
+                    initViewer();
+                } else {
+                    document.getElementById('password-error').style.display = 'block';
+                }
+            } catch (e) {
+                document.getElementById('password-error').style.display = 'block';
+            }
+        }
+
+        function initViewer() {
+            showScreen('viewer-screen');
+            document.getElementById('viewer-title').innerText = `📄 ${currentDocData.title}`;
+            currentPageNum = currentDocData.page || 1;
+            document.getElementById('total-pages').innerText = mockPages.length;
+            renderPage();
+        }
+
+        function renderPage() {
+            document.getElementById('current-page').innerText = currentPageNum;
+            document.getElementById('a4-content').innerHTML = `
+                <h4 style="margin-bottom: 20px; color: #1e293b;">${currentDocData.title} - PAGE [${currentPageNum}]</h4>
+                <p style="font-size: 15px; line-height: 1.6;">${mockPages[currentPageNum - 1] || '내용 없음'}</p>
+            `;
+        }
+
+        function nextPage() {
+            if (currentPageNum < mockPages.length) {
+                currentPageNum++;
+                updateURLPage();
+                renderPage();
+            }
+        }
+
+        function prevPage() {
+            if (currentPageNum > 1) {
+                currentPageNum--;
+                updateURLPage();
+                renderPage();
+            }
+        }
+
+        function updateURLPage() {
+            const hash = window.location.hash.substring(2);
+            const parts = hash.split('/');
+            if (parts.length >= 3) {
+                parts[2] = currentPageNum;
+                window.location.hash = '/' + parts.join('/');
+            }
+        }
+
+        function zoomIn() {
+            currentScale += 0.1;
+            document.getElementById('a4-content').style.transform = `scale(${currentScale})`;
+        }
+
+        function zoomOut() {
+            if (currentScale > 0.5) {
+                currentScale -= 0.1;
+                document.getElementById('a4-content').style.transform = `scale(${currentScale})`;
+            }
+        }
+
+        function printDoc() {
+            window.print();
+        }
+
+        function downloadDoc() {
+            const fileData = currentDocData.content;
+            if (!fileData) {
+                alert('파일 데이터를 찾을 수 없습니다. (업로드한 기기에서만 다운로드 가능합니다)');
+                return;
+            }
+            const a = document.createElement('a');
+            a.href = fileData;
+            a.download = `${currentDocData.title}.hwpx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function shareLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                alert('현재 문서 링크가 복사되었습니다!');
+            });
+        }
+    </script>
+</body>
+</html>
