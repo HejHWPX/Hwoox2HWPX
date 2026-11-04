@@ -1,4 +1,3 @@
-# hwoox.2hwpx.github.io
+# Hwoox2hwpx
 Hi!
 This site is easy hwpx viewer!
-Made By HaRAM
