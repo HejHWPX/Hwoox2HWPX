@@ -283,7 +283,7 @@
     <div id="upload-container" class="container active">
         <div class="logo-area">
             <div class="logo">HWOOX<span>.</span></div>
-            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">RETRO HWPX VIEWER SYSTEM (GITHUB PAGES)</p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">RETRO HWPX VIEWER SYSTEM</p>
         </div>
         <h2>[ 문서 업로드 및 공유 링크 생성 ]</h2>
         <div class="form-group">
@@ -321,7 +321,7 @@
         <div class="progress-bar-container">
             <div class="progress-bar" id="progress-bar"></div>
         </div>
-        <p style="margin-top: 15px; font-size: 13px; color: #94a3b8;" id="loading-status">문서 패킷을 복원하는 중입니다...</p>
+        <p style="margin-top: 15px; font-size: 13px; color: #94a3b8;" id="loading-status">문서 패킷을 디코딩하는 중입니다...</p>
     </div>
 
     <!-- [STEP 3] 비밀번호 입력 화면 -->
@@ -371,22 +371,21 @@
         let mockPages = ["문서 첫 번째 페이지 내용입니다.", "문서 두 번째 페이지 내용입니다.", "문서 세 번째 페이지 내용입니다."];
 
         window.onload = function() {
-            // URL 해시 구조 파싱: #/문서제목/비밀번호base64/페이지번호
+            // URL 해시 구조 파싱: #/문서제목/비밀번호base64/페이지번호/파일Base64데이터
             const hash = window.location.hash;
             
             if (hash.startsWith('#/')) {
                 const parts = hash.substring(2).split('/');
-                if (parts.length >= 3) {
+                if (parts.length >= 4) {
                     const title = decodeURIComponent(parts[0]);
                     const encodedPwd = parts[1];
                     const pageNum = parseInt(parts[2]) || 1;
+                    const fileContent = decodeURIComponent(parts.slice(3).join('/'));
 
                     currentDocData.title = title;
                     currentDocData.pwdBase64 = encodedPwd;
                     currentDocData.page = pageNum;
-                    
-                    // 로컬스토리지에 업로드자가 저장해 둔 파일 내용 복원
-                    currentDocData.content = localStorage.getItem('hwpx_file_' + title) || "";
+                    currentDocData.content = fileContent;
 
                     showScreen('loading-screen');
                     startLoadingAnimation();
@@ -431,17 +430,12 @@
 
             reader.onload = function(e) {
                 const fileBase64 = e.target.result;
-                
-                // 브라우저 로컬 스토리지에 파일 데이터 저장 (제목 기준)
-                localStorage.setItem('hwpx_file_' + title, fileBase64);
-
-                // 비밀번호를 Base64로 인코딩 (없으면 'none')
                 const pwdBase64 = usePwd ? btoa(unescape(encodeURIComponent(password))) : 'none';
                 const pageNum = 1;
 
-                // 요청하신 형태의 링크 생성: https://사이트주소/#/문서제목/비밀번호base64/페이지번호
+                // 요청하신 형태의 링크 구조: https://사이트주소/#/문서제목/비밀번호base64/페이지번호/파일Base64데이터
                 const baseUrl = window.location.origin + window.location.pathname;
-                const shortLink = `${baseUrl}#/${encodeURIComponent(title)}/${pwdBase64}/${pageNum}`;
+                const shortLink = `${baseUrl}#/${encodeURIComponent(title)}/${pwdBase64}/${pageNum}/${encodeURIComponent(fileBase64)}`;
 
                 document.getElementById('generated-link').href = shortLink;
                 document.getElementById('generated-link').innerText = shortLink;
@@ -468,7 +462,6 @@
                 if (width >= 100) {
                     clearInterval(interval);
                     
-                    // 비밀번호가 설정되어 있는 경우 잠금 화면 표시
                     if (currentDocData.pwdBase64 && currentDocData.pwdBase64 !== 'none') {
                         showScreen('password-screen');
                     } else {
@@ -531,7 +524,7 @@
         function updateURLPage() {
             const hash = window.location.hash.substring(2);
             const parts = hash.split('/');
-            if (parts.length >= 3) {
+            if (parts.length >= 4) {
                 parts[2] = currentPageNum;
                 window.location.hash = '/' + parts.join('/');
             }
@@ -556,7 +549,7 @@
         function downloadDoc() {
             const fileData = currentDocData.content;
             if (!fileData) {
-                alert('파일 데이터를 찾을 수 없습니다. (업로드한 기기에서만 다운로드 가능합니다)');
+                alert('파일 데이터를 찾을 수 없습니다.');
                 return;
             }
             const a = document.createElement('a');
