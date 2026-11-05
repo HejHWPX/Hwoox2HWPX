@@ -283,9 +283,18 @@
     <div id="upload-container" class="container active">
         <div class="logo-area">
             <div class="logo">HWOOX<span>.</span></div>
-            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">한글뷰어프로그램HWPX!!!!!!!</p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">한글뷰어프로그램HWPX (GitHub 연동)</p>
         </div>
-        <h2>[ 문서 업로드 및 공유 링크 생성 ]</h2>
+        <h2>[ 문서 업로드 및 GitHub 저장 ]</h2>
+        
+        <div class="form-group">
+            <label for="github-repo">> GitHub 저장소 (예: 사용자명/저장소명)</label>
+            <input type="text" id="github-repo" placeholder="username/repository">
+        </div>
+        <div class="form-group">
+            <label for="github-token">> GitHub 개인 액세스 토큰 (Token)</label>
+            <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
+        </div>
         <div class="form-group">
             <label for="doc-title">> 문서 제목 입력</label>
             <input type="text" id="doc-title" placeholder="제목을 입력하세요">
@@ -302,7 +311,7 @@
             <label for="doc-password">> 암호 설정</label>
             <input type="password" id="doc-password" placeholder="비밀번호 입력">
         </div>
-        <button onclick="generateLink()">[ 공유 링크 생성하기 ]</button>
+        <button onclick="uploadToGitHub()">[ GitHub에 저장 후 링크 생성 ]</button>
         
         <div id="result-box">
             <strong>> 생성된 공유 링크:</strong><br>
@@ -321,7 +330,7 @@
         <div class="progress-bar-container">
             <div class="progress-bar" id="progress-bar"></div>
         </div>
-        <p style="margin-top: 15px; font-size: 13px; color: #94a3b8;" id="loading-status">문서 패킷을 디코딩하는 중입니다...</p>
+        <p style="margin-top: 15px; font-size: 13px; color: #94a3b8;" id="loading-status">GitHub에서 문서를 다운로드하는 중입니다...</p>
     </div>
 
     <!-- [STEP 3] 비밀번호 입력 화면 -->
@@ -371,24 +380,23 @@
         let mockPages = ["문서 첫 번째 페이지 내용입니다.", "문서 두 번째 페이지 내용입니다.", "문서 세 번째 페이지 내용입니다."];
 
         window.onload = function() {
-            // URL 해시 구조 파싱: #/문서제목/비밀번호base64/페이지번호/파일Base64데이터
+            // URL 해시 구조 파싱: #/저장소명/파일명/비밀번호base64/페이지번호
             const hash = window.location.hash;
             
             if (hash.startsWith('#/')) {
                 const parts = hash.substring(2).split('/');
                 if (parts.length >= 4) {
-                    const title = decodeURIComponent(parts[0]);
-                    const encodedPwd = parts[1];
-                    const pageNum = parseInt(parts[2]) || 1;
-                    const fileContent = decodeURIComponent(parts.slice(3).join('/'));
+                    const repo = decodeURIComponent(parts[0]);
+                    const filename = decodeURIComponent(parts[1]);
+                    const encodedPwd = parts[2];
+                    const pageNum = parseInt(parts[3]) || 1;
 
-                    currentDocData.title = title;
+                    currentDocData.title = filename.replace('.hwpx', '');
                     currentDocData.pwdBase64 = encodedPwd;
                     currentDocData.page = pageNum;
-                    currentDocData.content = fileContent;
 
                     showScreen('loading-screen');
-                    startLoadingAnimation();
+                    startLoadingAnimation(repo, filename);
                     return;
                 }
             }
@@ -406,12 +414,18 @@
             document.getElementById('password-group').style.display = usePwd ? 'block' : 'none';
         }
 
-        function generateLink() {
+        async function uploadToGitHub() {
+            const repo = document.getElementById('github-repo').value.trim();
+            const token = document.getElementById('github-token').value.trim();
             const title = document.getElementById('doc-title').value.trim();
             const fileInput = document.getElementById('hwpx-file');
             const usePwd = document.getElementById('use-password').checked;
             const password = document.getElementById('doc-password').value;
 
+            if (!repo || !token) {
+                alert('GitHub 저장소(repo)와 개인 액세스 토큰(token)을 입력해주세요.');
+                return;
+            }
             if (!title) {
                 alert('문서 제목을 입력해주세요.');
                 return;
@@ -426,22 +440,50 @@
             }
 
             const file = fileInput.files[0];
-            const reader = new FileReader();
+            const filename = Date.now() + '_' + encodeURIComponent(file.name);
 
-            reader.onload = function(e) {
-                const fileBase64 = e.target.result;
+            // 파일을 Base64로 변환
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                // Base64 데이터 접두사(data:application/octet-stream;base64,) 제거
+                const base64Content = e.target.result.split(',')[1];
                 const pwdBase64 = usePwd ? btoa(unescape(encodeURIComponent(password))) : 'none';
                 const pageNum = 1;
 
-                // 요청하신 형태의 링크 구조: https://사이트주소/#/문서제목/비밀번호base64/페이지번호/파일Base64데이터
-                const baseUrl = window.location.origin + window.location.pathname;
-                const shortLink = `${baseUrl}#/${encodeURIComponent(title)}/${pwdBase64}/${pageNum}/${encodeURIComponent(fileBase64)}`;
+                const url = `https://api.github.com/repos/${repo}/contents/uploads/${filename}`;
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: `Upload HWPX Document: ${title}`,
+                            content: base64Content
+                        })
+                    });
 
-                document.getElementById('generated-link').href = shortLink;
-                document.getElementById('generated-link').innerText = shortLink;
-                document.getElementById('result-box').style.display = 'block';
+                    if (!response.ok) {
+                        throw new Error('GitHub 업로드 실패 (저장소 이름이나 토큰 권한을 확인하세요)');
+                    }
+
+                    const result = await response.json();
+                    
+                    // 공유 링크 생성 (현재 사이트 주소 + #/저장소/파일명/비번/페이지)
+                    const baseUrl = window.location.origin + window.location.pathname;
+                    const shortLink = `${baseUrl}#/${encodeURIComponent(repo)}/${encodeURIComponent(filename)}/${pwdBase64}/${pageNum}`;
+
+                    document.getElementById('generated-link').href = shortLink;
+                    document.getElementById('generated-link').innerText = shortLink;
+                    document.getElementById('result-box').style.display = 'block';
+                    alert('GitHub에 문서가 성공적으로 저장되었습니다!');
+
+                } catch (err) {
+                    alert('오류 발생: ' + err.message);
+                }
             };
-
             reader.readAsDataURL(file);
         }
 
@@ -452,26 +494,52 @@
             });
         }
 
-        function startLoadingAnimation() {
+        async function startLoadingAnimation(repo, filename) {
             let progressBar = document.getElementById('progress-bar');
             let width = 0;
 
             document.getElementById('loading-doc-title').innerText = `[ ${currentDocData.title} ] 로딩 중...`;
 
+            // 프로그레스바 진행과 동시에 GitHub에서 파일 다운로드 수행
             let interval = setInterval(() => {
-                if (width >= 100) {
-                    clearInterval(interval);
-                    
+                if (width < 80) {
+                    width += 20;
+                    progressBar.style.width = width + '%';
+                }
+            }, 80);
+
+            try {
+                // GitHub Contents API를 통해 파일 가져오기 (인증 없이 공개 저장소면 바로 호출 가능)
+                const apiUrl = `https://api.github.com/repos/${repo}/contents/uploads/${filename}`;
+                const res = await fetch(apiUrl);
+                if (!res.ok) throw new Error('파일을 불러올 수 없습니다.');
+                
+                const data = await res.json();
+                // Base64 콘텐츠 디코딩
+                const rawBinary = atob(data.content.replace(/\s/g, ''));
+                const bytes = new Uint8Array(rawBinary.length);
+                for (let i = 0; i < rawBinary.length; i++) {
+                    bytes[i] = rawBinary.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                currentDocData.content = URL.createObjectURL(blob);
+
+                clearInterval(interval);
+                progressBar.style.width = '100%';
+
+                setTimeout(() => {
                     if (currentDocData.pwdBase64 && currentDocData.pwdBase64 !== 'none') {
                         showScreen('password-screen');
                     } else {
                         initViewer();
                     }
-                } else {
-                    width += 20;
-                    progressBar.style.width = width + '%';
-                }
-            }, 80);
+                }, 300);
+
+            } catch (err) {
+                clearInterval(interval);
+                alert('문서 로드 실패: ' + err.message);
+                showScreen('upload-container');
+            }
         }
 
         function verifyPassword() {
@@ -525,7 +593,7 @@
             const hash = window.location.hash.substring(2);
             const parts = hash.split('/');
             if (parts.length >= 4) {
-                parts[2] = currentPageNum;
+                parts[3] = currentPageNum;
                 window.location.hash = '/' + parts.join('/');
             }
         }
